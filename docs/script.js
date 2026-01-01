@@ -78,11 +78,11 @@ function getStopProbability(value) {
     } else if (value <= 40) {
         return 0.3; // 20〜40は30%で停止
     } else if (value <= 60) {
-        return 0.5; // 40〜60は50%で停止
+        return 0.7; // 40〜60は50%で停止
     } else if (value <= 80) {
-        return 0.6; // 60〜80は60%で停止
+        return 0.85; // 60〜80は60%で停止
     } else if (value <= 120) {
-        return 0.75; // 80〜120は75%で停止
+        return 0.95; // 80〜120は75%で停止
     } else {
         return 1.0; // それ以上は100%で停止
     }

@@ -7,6 +7,8 @@
     "doc": "docs"
   },
   "scripts": {
+    "extract": "node extract-functions.js",
+    "pretest": "npm run extract",
     "test": "node --test test-functions.js"
   },
   "repository": {
