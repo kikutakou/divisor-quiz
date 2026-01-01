@@ -228,6 +228,7 @@ function displayQuestion(question) {
     question.choices.forEach((choice, index) => {
         const button = document.createElement('button');
         button.className = 'choice-btn';
+        button.setAttribute('tabindex', '-1');  // フォーカスを無効化
         button.textContent = `${choice.pair[0]} × ${choice.pair[1]}`;
         button.addEventListener('click', () => handleAnswer(choice, button, question));
         elements.choices.appendChild(button);

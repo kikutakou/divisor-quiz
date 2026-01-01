@@ -272,13 +272,30 @@ body::before {
     color: var(--text-primary);
     cursor: pointer;
     transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
-.choice-btn:hover:not(:disabled) {
-    border-color: var(--accent-primary);
-    background: rgba(0, 217, 255, 0.1);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 217, 255, 0.2);
+/* フォーカス状態をリセット（モバイル対応） */
+.choice-btn:focus,
+.choice-btn:focus-visible {
+    outline: none !important;
+    border-color: rgba(0, 217, 255, 0.2) !important;
+    background: var(--bg-card) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* マウスデバイスでのみhoverスタイルを適用 */
+@media (hover: hover) and (pointer: fine) {
+    .choice-btn:hover:not(:disabled) {
+        border-color: var(--accent-primary);
+        background: rgba(0, 217, 255, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 217, 255, 0.2);
+    }
 }
 
 .choice-btn:active:not(:disabled) {
