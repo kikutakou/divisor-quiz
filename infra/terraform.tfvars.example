@@ -1,0 +1,14 @@
+# Google Cloud プロジェクトID
+project_id = "your-project-id"
+
+# 親ドメイン名
+domain = "example.com"
+
+# Cloud DNSのマネージドゾーン名
+zone_name = "example-zone"
+
+# サブドメイン名
+subdomain = "divisor-quiz"
+
+# GitHub Pagesのドメイン
+github_pages_domain = "your-username.github.io"
