@@ -3,9 +3,10 @@ const gameState = {
     correctCount: 0,
     wrongCount: 0,
     totalQuestions: 0,
-    targetCorrect: 20,
+    maxQuestions: 10,
     currentNumber: 0,
-    isAnswering: false
+    isAnswering: false,
+    history: [] // 問題履歴
 };
 
 // DOM要素
@@ -29,7 +30,9 @@ const elements = {
     finalCorrect: document.getElementById('final-correct'),
     finalWrong: document.getElementById('final-wrong'),
     finalRate: document.getElementById('final-rate'),
-    resultMessage: document.getElementById('result-message')
+    resultMessage: document.getElementById('result-message'),
+    history: document.getElementById('history'),
+    totalQuestionsInfo: document.getElementById('total-questions-info')
 };
 
 // 画面切り替え
@@ -141,21 +144,21 @@ function updateUI() {
     elements.correctCount.textContent = gameState.correctCount;
     elements.wrongCount.textContent = gameState.wrongCount;
     
-    const progress = (gameState.correctCount / gameState.targetCorrect) * 100;
+    const progress = (gameState.totalQuestions / gameState.maxQuestions) * 100;
     elements.progressFill.style.width = `${progress}%`;
-    elements.progressText.textContent = `${gameState.correctCount} / ${gameState.targetCorrect}`;
+    elements.progressText.textContent = `${gameState.totalQuestions} / ${gameState.maxQuestions}`;
 }
 
 // フィードバックを表示
-function showFeedback(isCorrect, correctAnswer) {
+function showFeedback(isCorrect) {
     elements.feedback.classList.remove('correct', 'wrong');
     elements.feedback.classList.add(isCorrect ? 'correct' : 'wrong');
     elements.feedback.classList.add('visible');
     
     if (isCorrect) {
-        elements.feedbackText.textContent = '正解！ 🎉';
+        elements.feedbackText.textContent = '正解！';
     } else {
-        elements.feedbackText.textContent = `不正解... 正解は ${correctAnswer[0]} × ${correctAnswer[1]} = ${gameState.currentNumber}`;
+        elements.feedbackText.textContent = '不正解';
     }
 }
 
@@ -194,6 +197,17 @@ function handleAnswer(choice, button, question) {
     // 正解を見つける
     const correctChoice = question.choices.find(c => c.isCorrect);
     
+    // 待機時間（正解時は短く、不正解時は長く）
+    let delay = 1000;
+    
+    // 履歴に記録
+    gameState.history.push({
+        number: question.number,
+        userAnswer: choice.pair,
+        correctAnswer: correctChoice.pair,
+        isCorrect: choice.isCorrect
+    });
+    
     if (choice.isCorrect) {
         gameState.correctCount++;
         button.classList.add('correct');
@@ -207,19 +221,20 @@ function handleAnswer(choice, button, question) {
                 btn.classList.add('correct');
             }
         });
-        showFeedback(false, correctChoice.pair);
+        showFeedback(false);
+        delay = 2000; // 不正解時は長めに表示
     }
     
     updateUI();
     
     // 次の問題へ、または結果画面へ
     setTimeout(() => {
-        if (gameState.correctCount >= gameState.targetCorrect) {
+        if (gameState.totalQuestions >= gameState.maxQuestions) {
             showResult();
         } else {
             nextQuestion();
         }
-    }, 1500);
+    }, delay);
 }
 
 // 次の問題
@@ -240,17 +255,37 @@ function showResult() {
     elements.finalRate.textContent = `${rate}%`;
     
     let message = '';
-    if (wrong === 0) {
+    if (rate === 100) {
         message = '<span class="emoji">🏆</span>パーフェクト！素晴らしい！';
-    } else if (wrong <= 3) {
+    } else if (rate >= 80) {
         message = '<span class="emoji">🌟</span>素晴らしい成績です！';
-    } else if (wrong <= 7) {
+    } else if (rate >= 50) {
         message = '<span class="emoji">👍</span>よく頑張りました！';
-    } else {
+    } else if (rate >= 30) {
         message = '<span class="emoji">💪</span>もう少し練習してみましょう！';
+    } else {
+        message = '<span class="emoji">📚</span>約数について復習しましょう！';
     }
     
     elements.resultMessage.innerHTML = message;
+    
+    // 履歴を表示
+    elements.history.innerHTML = gameState.history.map((item, index) => {
+        const statusClass = item.isCorrect ? 'correct' : 'wrong';
+        const statusText = item.isCorrect ? '○' : '×';
+        const userAnswerText = `${item.userAnswer[0]} × ${item.userAnswer[1]}`;
+        const correctAnswerText = item.isCorrect ? '' : `（正解: ${item.correctAnswer[0]} × ${item.correctAnswer[1]}）`;
+        
+        return `
+            <div class="history-item ${statusClass}">
+                <span class="history-number">${index + 1}.</span>
+                <span class="history-question">${item.number}</span>
+                <span class="history-status">${statusText}</span>
+                <span class="history-answer">${userAnswerText}${correctAnswerText}</span>
+            </div>
+        `;
+    }).join('');
+    
     showScreen('result');
 }
 
@@ -260,6 +295,7 @@ function startGame() {
     gameState.wrongCount = 0;
     gameState.totalQuestions = 0;
     gameState.isAnswering = false;
+    gameState.history = [];
     
     updateUI();
     showScreen('quiz');
@@ -271,4 +307,10 @@ elements.startBtn.addEventListener('click', startGame);
 elements.restartBtn.addEventListener('click', startGame);
 
 // 初期化
-showScreen('start');
+function init() {
+    elements.totalQuestionsInfo.textContent = `全${gameState.maxQuestions}問`;
+    elements.progressText.textContent = `0 / ${gameState.maxQuestions}`;
+    showScreen('start');
+}
+
+init();

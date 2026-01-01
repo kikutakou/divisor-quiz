@@ -15,8 +15,8 @@
                 <p class="subtitle">Divisor Quiz</p>
             </div>
             <div class="start-info">
-                <p>与えられた数の約数の組み合わせを選んでください</p>
-                <p>20問正解でクリア！</p>
+                <p>与えられた数の<br>約数の組み合わせを選んでください</p>
+                <p id="total-questions-info"></p>
             </div>
             <button id="start-btn" class="btn btn-primary">スタート</button>
         </div>
@@ -28,7 +28,7 @@
                     <div class="progress-bar">
                         <div id="progress-fill" class="progress-fill"></div>
                     </div>
-                    <span id="progress-text" class="progress-text">0 / 20</span>
+                    <span id="progress-text" class="progress-text"></span>
                 </div>
                 <div class="stats">
                     <div class="stat">
@@ -63,7 +63,7 @@
                 <div class="result-stats">
                     <div class="result-stat">
                         <span class="result-stat-label">正解数</span>
-                        <span id="final-correct" class="result-stat-value">20</span>
+                        <span id="final-correct" class="result-stat-value">10</span>
                     </div>
                     <div class="result-stat">
                         <span class="result-stat-label">不正解数</span>
@@ -75,6 +75,9 @@
                     </div>
                 </div>
                 <div id="result-message" class="result-message"></div>
+                <div id="history" class="history">
+                    <!-- 履歴がここに挿入される -->
+                </div>
                 <button id="restart-btn" class="btn btn-primary">もう一度挑戦</button>
             </div>
         </div>
