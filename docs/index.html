@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>約数クイズ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- スタート画面 -->
+        <div id="start-screen" class="screen">
+            <div class="title-container">
+                <h1 class="title">約数クイズ</h1>
+                <p class="subtitle">Divisor Quiz</p>
+            </div>
+            <div class="start-info">
+                <p>与えられた数の約数の組み合わせを選んでください</p>
+                <p>20問正解でクリア！</p>
+            </div>
+            <button id="start-btn" class="btn btn-primary">スタート</button>
+        </div>
+
+        <!-- クイズ画面 -->
+        <div id="quiz-screen" class="screen hidden">
+            <div class="header">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <span id="progress-text" class="progress-text">0 / 20</span>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-label">正解</span>
+                        <span id="correct-count" class="stat-value correct">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">不正解</span>
+                        <span id="wrong-count" class="stat-value wrong">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-container">
+                <p class="question-label">この数の約数の組み合わせは？</p>
+                <div id="target-number" class="target-number">60</div>
+            </div>
+
+            <div id="choices" class="choices">
+                <!-- 選択肢がここに挿入される -->
+            </div>
+
+            <div id="feedback" class="feedback">
+                <span id="feedback-text"></span>
+            </div>
+        </div>
+
+        <!-- 結果画面 -->
+        <div id="result-screen" class="screen hidden">
+            <div class="result-container">
+                <h2 class="result-title">クイズ完了！</h2>
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <span class="result-stat-label">正解数</span>
+                        <span id="final-correct" class="result-stat-value">20</span>
+                    </div>
+                    <div class="result-stat">
+                        <span class="result-stat-label">不正解数</span>
+                        <span id="final-wrong" class="result-stat-value">0</span>
+                    </div>
+                    <div class="result-stat">
+                        <span class="result-stat-label">正答率</span>
+                        <span id="final-rate" class="result-stat-value">100%</span>
+                    </div>
+                </div>
+                <div id="result-message" class="result-message"></div>
+                <button id="restart-btn" class="btn btn-primary">もう一度挑戦</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
