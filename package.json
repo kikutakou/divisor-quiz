@@ -1,0 +1,27 @@
+{
+  "name": "divisor-quiz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "extract-pure-functions.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "node --test test-functions.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kikutakou/divisor-quiz.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/kikutakou/divisor-quiz/issues"
+  },
+  "homepage": "https://github.com/kikutakou/divisor-quiz#readme",
+  "dependencies": {
+    "acorn": "^8.15.0"
+  }
+}

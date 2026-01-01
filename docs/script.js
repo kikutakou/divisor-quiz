@@ -41,10 +41,10 @@ function showScreen(screenName) {
     screens[screenName].classList.remove('hidden');
 }
 
-// 約数のペアを取得
+// 約数のペアを取得（1を含むペアは除外）
 function getDivisorPairs(n) {
     const pairs = [];
-    for (let i = 1; i <= Math.sqrt(n); i++) {
+    for (let i = 2; i <= Math.sqrt(n); i++) {
         if (n % i === 0) {
             pairs.push([i, n / i]);
         }
@@ -52,80 +52,128 @@ function getDivisorPairs(n) {
     return pairs;
 }
 
-// ランダムな数を生成（2〜120の範囲で、約数が複数あるもの）
-function generateRandomNumber() {
-    const numbers = [];
-    for (let i = 4; i <= 120; i++) {
-        const pairs = getDivisorPairs(i);
-        // 約数のペアが2つ以上ある数（1とその数自身以外のペアがある）
-        if (pairs.length >= 2) {
-            numbers.push(i);
+// 37以下の素数（小さい順）
+const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+
+// 重み付きランダム選択（小さい素数ほど高確率）
+function selectWeightedPrime() {
+    // 重み: 2, 3, 5, 7を特に高確率に
+    const weights = [25, 20, 15, 12, 3, 2, 1, 1, 1, 1, 1, 1];
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let random = Math.random() * totalWeight;
+    
+    for (let i = 0; i < PRIMES.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+            return PRIMES[i];
         }
     }
-    return numbers[Math.floor(Math.random() * numbers.length)];
+    return PRIMES[0];
 }
 
-// 不正解の選択肢を生成
-function generateWrongChoice(targetNumber, correctPairs) {
-    const maxFactor = 15;
-    let attempts = 0;
+// 現在の数値に応じて停止確率を計算
+function getStopProbability(value) {
+    if (value < 20) {
+        return 0; // 20未満は続ける
+    } else if (value <= 40) {
+        return 0.3; // 20〜40は30%で停止
+    } else if (value <= 60) {
+        return 0.5; // 40〜60は50%で停止
+    } else if (value <= 80) {
+        return 0.6; // 60〜80は60%で停止
+    } else if (value <= 120) {
+        return 0.75; // 80〜120は75%で停止
+    } else {
+        return 1.0; // それ以上は100%で停止
+    }
+}
+
+// クイズの正解となる数を生成（素数を掛け合わせて生成）
+function generateAnswerNumber(maxValue = 150) {
+    let result = selectWeightedPrime();
+    const divisors = [result];
+    let retry = 0;
     
-    while (attempts < 100) {
-        const a = Math.floor(Math.random() * maxFactor) + 2;
-        const b = Math.floor(Math.random() * maxFactor) + 2;
-        const product = a * b;
+    while (divisors.length < 5) {
+        const prime = selectWeightedPrime();
+        const newResult = result * prime;
         
-        // 正解と同じでなく、ターゲットと異なる積の場合
-        if (product !== targetNumber && product <= 150) {
-            const isCorrectPair = correctPairs.some(
-                pair => (pair[0] === a && pair[1] === b) || (pair[0] === b && pair[1] === a)
-            );
-            if (!isCorrectPair) {
-                return [Math.min(a, b), Math.max(a, b)];
+        // 上限を超えたら終了
+        if (newResult > maxValue) {
+            if (divisors.length < 2) {
+                result *= [2, 3][Math.floor(Math.random() * 2)];
+            }else if (retry < 3){
+                retry++;
+                continue;
             }
+            break;
         }
-        attempts++;
+        
+        result = newResult;
+        divisors.push(result);
+        
+        // 現在の値に応じて停止するかどうかを判定
+        if (Math.random() < getStopProbability(result)) {
+            break;
+        }
     }
     
-    // フォールバック
-    return [2, targetNumber + 1];
+    return result;
+}
+
+// 不正解の選択肢を3つ生成
+function generateWrongChoices(targetNumber) {
+    // 候補となる数値の配列を生成（3以下とtargetNumberは除外）
+    const candidates = [];
+    for (let offset = -10; offset <= 10; offset++) {
+        const nearbyNumber = targetNumber + offset;
+        if (nearbyNumber > 3 && nearbyNumber !== targetNumber) {
+            candidates.push(nearbyNumber);
+        }
+    }
+    shuffleArray(candidates);
+    // targetNumberが奇数の場合、奇数を優先的に選ぶ
+    if (targetNumber % 2 === 1) {
+        candidates.sort((a, b) => (a % 2 === 0) - (b % 2 === 0));
+    }
+    
+    // 候補から順に約数ペアを取得
+    const wrongChoices = [];
+    for (const nearbyNumber of candidates) {
+        if (wrongChoices.length >= 3) break;
+        
+        const pairs = getDivisorPairs(nearbyNumber);
+        if (pairs.length === 0) continue;
+        
+        const selectedPair = pairs[Math.floor(Math.random() * pairs.length)];
+        wrongChoices.push(selectedPair);
+    }
+    
+    return wrongChoices;
 }
 
 // 選択肢をシャッフル
 function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    const shuffled = array
+        .map(value => ({ value, rand: Math.random() }))
+        .sort((a, b) => a.rand - b.rand);
+    for (let i = 0; i < array.length; i++) {
+        array[i] = shuffled[i].value;
     }
     return array;
 }
 
 // 新しい問題を生成
 function generateQuestion() {
-    const number = generateRandomNumber();
+    const number = generateAnswerNumber();
     gameState.currentNumber = number;
     const correctPairs = getDivisorPairs(number);
     
-    // 正解の選択肢をランダムに1つ選ぶ（1 × n以外を優先）
-    const nonTrivialPairs = correctPairs.filter(pair => pair[0] !== 1);
-    const correctPair = nonTrivialPairs.length > 0
-        ? nonTrivialPairs[Math.floor(Math.random() * nonTrivialPairs.length)]
-        : correctPairs[Math.floor(Math.random() * correctPairs.length)];
+    // 正解の選択肢をランダムに1つ選ぶ
+    const correctPair = correctPairs[Math.floor(Math.random() * correctPairs.length)];
     
     // 不正解の選択肢を3つ生成
-    const wrongChoices = [];
-    const usedProducts = new Set([number]);
-    
-    while (wrongChoices.length < 3) {
-        const wrongChoice = generateWrongChoice(number, correctPairs);
-        const product = wrongChoice[0] * wrongChoice[1];
-        const key = `${wrongChoice[0]}x${wrongChoice[1]}`;
-        
-        if (!usedProducts.has(product)) {
-            wrongChoices.push(wrongChoice);
-            usedProducts.add(product);
-        }
-    }
+    const wrongChoices = generateWrongChoices(number);
     
     // 全ての選択肢を作成
     const allChoices = [
@@ -169,6 +217,11 @@ function hideFeedback() {
 
 // 問題を表示
 function displayQuestion(question) {
+    // 前の選択肢のフォーカス状態を解除（モバイル対応）
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
+    
     elements.targetNumber.textContent = question.number;
     elements.choices.innerHTML = '';
     
@@ -188,6 +241,9 @@ function displayQuestion(question) {
 function handleAnswer(choice, button, question) {
     if (gameState.isAnswering) return;
     gameState.isAnswering = true;
+    
+    // タップ後すぐにフォーカスを解除（モバイル対応）
+    button.blur();
     
     const buttons = elements.choices.querySelectorAll('.choice-btn');
     buttons.forEach(btn => btn.disabled = true);
@@ -305,6 +361,14 @@ function startGame() {
 // イベントリスナー
 elements.startBtn.addEventListener('click', startGame);
 elements.restartBtn.addEventListener('click', startGame);
+
+// キーボードイベント（スペースキーでスタート）
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !screens.start.classList.contains('hidden')) {
+        e.preventDefault();
+        startGame();
+    }
+});
 
 // 初期化
 function init() {
