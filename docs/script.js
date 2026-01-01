@@ -58,7 +58,7 @@ const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
 // 重み付きランダム選択（小さい素数ほど高確率）
 function selectWeightedPrime() {
     // 重み: 2, 3, 5, 7を特に高確率に
-    const weights = [25, 20, 15, 12, 3, 2, 1, 1, 1, 1, 1, 1];
+    const weights = [25, 25, 8, 12, 3, 2, 1, 1, 1, 1, 1, 1];
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     let random = Math.random() * totalWeight;
     
@@ -72,20 +72,18 @@ function selectWeightedPrime() {
 }
 
 // 現在の数値に応じて停止確率を計算
+// [確率, 閾値] の配列（閾値未満なら確率を返す）
+const STOP_PROBABILITY_TABLE = [
+    [0, 20],      // 20未満は続ける
+    [0.3, 40],    // 20〜40は30%で停止
+    [0.7, 60],    // 40〜60は70%で停止
+    [0.90, 80],   // 60〜80は85%で停止
+    [0.98, 100],  // 80〜120は95%で停止
+];
+
 function getStopProbability(value) {
-    if (value < 20) {
-        return 0; // 20未満は続ける
-    } else if (value <= 40) {
-        return 0.3; // 20〜40は30%で停止
-    } else if (value <= 60) {
-        return 0.7; // 40〜60は50%で停止
-    } else if (value <= 80) {
-        return 0.85; // 60〜80は60%で停止
-    } else if (value <= 120) {
-        return 0.95; // 80〜120は75%で停止
-    } else {
-        return 1.0; // それ以上は100%で停止
-    }
+    const entry = STOP_PROBABILITY_TABLE.find(([, threshold]) => value < threshold);
+    return entry ? entry[0] : 1.0; // それ以上は100%で停止
 }
 
 // クイズの正解となる数を生成（素数を掛け合わせて生成）
@@ -100,9 +98,7 @@ function generateAnswerNumber(maxValue = 150) {
         
         // 上限を超えたら終了
         if (newResult > maxValue) {
-            if (divisors.length < 2) {
-                result *= [2, 3][Math.floor(Math.random() * 2)];
-            }else if (retry < 3){
+            if (retry < 10){
                 retry++;
                 continue;
             }
