@@ -1,19 +1,52 @@
 // 固定設定
 const MAX_QUESTIONS = 10;
 
-// ゲーム設定パラメータ
-const CONFIG = {
-    MAX_PRIME_FACTORS: 5,
-    PRIME_WEIGHTS: { 2: 25, 3: 25, 5: 8, 7: 12, 11: 3, 13: 2, 17: 1, 19: 1, 23: 1, 29: 1, 31: 1, 37: 1 },
-    STOP_PROBABILITY_TABLE: [
-        [0, 20],      // 20未満は続ける
-        [0.3, 40],    // 20〜40は30%で停止
-        [0.7, 60],    // 40〜60は70%で停止
-        [0.90, 80],   // 60〜80は90%で停止
-        [0.98, 100],  // 80〜100は98%で停止
-    ],
-    MAX_VALUE: 150,
-};
+// ゲーム設定パラメータ（難易度別）
+const CONFIGS = [
+    // 初級: 小さい数、シンプルな素因数
+    {
+        name: '初級',
+        MAX_PRIME_FACTORS: 5,
+        PRIME_WEIGHTS: { 2: 40, 3: 35, 5: 15, 7: 10 },
+        STOP_PROBABILITY_TABLE: [
+            [0, 20],      // 20未満は続ける
+            [0.4, 40],    // 20〜40は40%で停止
+            [0.8, 60],    // 40〜60は80%で停止
+            [0.95, 80],   // 60〜80は95%で停止
+        ],
+        MAX_VALUE: 60,
+    },
+    // 中級: 中程度の難易度
+    {
+        name: '中級',
+        MAX_PRIME_FACTORS: 5,
+        PRIME_WEIGHTS: { 2: 30, 3: 30, 5: 15, 7: 15, 11: 5, 13: 5 },
+        STOP_PROBABILITY_TABLE: [
+            [0, 20],      // 20未満は続ける
+            [0.4, 40],    // 20〜40は40%で停止
+            [0.8, 60],    // 40〜60は80%で停止
+            [0.95, 80],   // 60〜80は95%で停止
+        ],
+        MAX_VALUE: 100,
+    },
+    // 上級: 現在の設定
+    {
+        name: '上級',
+        MAX_PRIME_FACTORS: 5,
+        PRIME_WEIGHTS: { 2: 25, 3: 25, 5: 8, 7: 12, 11: 3, 13: 2, 17: 1, 19: 1, 23: 1, 29: 1, 31: 1, 37: 1 },
+        STOP_PROBABILITY_TABLE: [
+            [0, 20],      // 20未満は続ける
+            [0.3, 40],    // 20〜40は30%で停止
+            [0.7, 60],    // 40〜60は70%で停止
+            [0.90, 80],   // 60〜80は90%で停止
+            [0.98, 100],  // 80〜100は98%で停止
+        ],
+        MAX_VALUE: 150,
+    },
+];
+
+// 現在の設定（デフォルトは中級）
+let currentConfig = CONFIGS[1];
 
 // 約数のペアを取得（1を含むペアは除外）
 function getDivisorPairs(n) {
@@ -49,7 +82,7 @@ function getStopProbability(value, stopProbabilityTable) {
 }
 
 // クイズの正解となる数を生成（素数を掛け合わせて生成）
-function generateAnswerNumber(config = CONFIG) {
+function generateAnswerNumber(config = currentConfig) {
     const maxValue = config.MAX_VALUE;
     // 最小素数と最大素数の積がmaxValue以下であることを確認
     // これにより、どの素数からスタートしても少なくとも1つの素数を掛けられることが保証される
@@ -187,7 +220,8 @@ const elements = {
     finalRate: document.getElementById('final-rate'),
     resultMessage: document.getElementById('result-message'),
     history: document.getElementById('history'),
-    totalQuestionsInfo: document.getElementById('total-questions-info')
+    totalQuestionsInfo: document.getElementById('total-questions-info'),
+    difficultyBtns: document.querySelectorAll('.difficulty-btn')
 };
 
 // 画面切り替え
@@ -362,9 +396,26 @@ function startGame() {
     displayQuestion(generateQuestion());
 }
 
+// 難易度選択
+function selectDifficulty(level) {
+    currentConfig = CONFIGS[level];
+    elements.difficultyBtns.forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.level) === level);
+    });
+}
+
 // イベントリスナー
 elements.startBtn.addEventListener('click', startGame);
-elements.restartBtn.addEventListener('click', startGame);
+elements.restartBtn.addEventListener('click', () => {
+    showScreen('start');
+});
+
+// 難易度ボタンのイベントリスナー
+elements.difficultyBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        selectDifficulty(parseInt(btn.dataset.level));
+    });
+});
 
 // キーボードイベント（スペースキーでスタート）
 document.addEventListener('keydown', (e) => {
