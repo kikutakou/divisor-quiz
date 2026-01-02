@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
-import { getDivisorPairs, generateAnswerNumber, generateWrongChoices } from './quiz-logic.js';
+import { getDivisorPairs, generateAnswerNumber, generateWrongChoices, CONFIG } from './quiz-logic.js';
 
 describe('getDivisorPairs', () => {
     test('all pairs multiply to the original number and no duplicates exist for 1-400', () => {
@@ -21,13 +21,12 @@ describe('getDivisorPairs', () => {
 
 describe('generateAnswerNumber', () => {
     test('always returns valid numbers with non-empty divisor pairs and <= max_number in 1000 iterations', () => {
-        const max_number = 150;
         for (let i = 0; i < 1000; i++) {
-            const n = generateAnswerNumber(max_number);
+            const n = generateAnswerNumber();
             console.log(n);
             const pairs = getDivisorPairs(n);
             assert.ok(pairs.length > 0, `Generated number ${n} is prime (has no valid divisor pairs)`);
-            assert.ok(n <= max_number, `Generated number ${n} exceeds max_number ${max_number}`);
+            assert.ok(n <= CONFIG.MAX_VALUE, `Generated number ${n} exceeds max_number ${CONFIG.MAX_VALUE}`);
         }
     });
 });

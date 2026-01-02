@@ -1,45 +1,19 @@
-// ゲームの状態管理
-const gameState = {
-    correctCount: 0,
-    wrongCount: 0,
-    totalQuestions: 0,
-    maxQuestions: 10,
-    currentNumber: 0,
-    isAnswering: false,
-    history: [] // 問題履歴
-};
+// 固定設定
+const MAX_QUESTIONS = 10;
 
-// DOM要素
-const screens = {
-    start: document.getElementById('start-screen'),
-    quiz: document.getElementById('quiz-screen'),
-    result: document.getElementById('result-screen')
+// ゲーム設定パラメータ
+const CONFIG = {
+    MAX_PRIME_FACTORS: 5,
+    PRIME_WEIGHTS: { 2: 25, 3: 25, 5: 8, 7: 12, 11: 3, 13: 2, 17: 1, 19: 1, 23: 1, 29: 1, 31: 1, 37: 1 },
+    STOP_PROBABILITY_TABLE: [
+        [0, 20],      // 20未満は続ける
+        [0.3, 40],    // 20〜40は30%で停止
+        [0.7, 60],    // 40〜60は70%で停止
+        [0.90, 80],   // 60〜80は90%で停止
+        [0.98, 100],  // 80〜100は98%で停止
+    ],
+    MAX_VALUE: 150,
 };
-
-const elements = {
-    startBtn: document.getElementById('start-btn'),
-    restartBtn: document.getElementById('restart-btn'),
-    targetNumber: document.getElementById('target-number'),
-    choices: document.getElementById('choices'),
-    progressFill: document.getElementById('progress-fill'),
-    progressText: document.getElementById('progress-text'),
-    correctCount: document.getElementById('correct-count'),
-    wrongCount: document.getElementById('wrong-count'),
-    feedback: document.getElementById('feedback'),
-    feedbackText: document.getElementById('feedback-text'),
-    finalCorrect: document.getElementById('final-correct'),
-    finalWrong: document.getElementById('final-wrong'),
-    finalRate: document.getElementById('final-rate'),
-    resultMessage: document.getElementById('result-message'),
-    history: document.getElementById('history'),
-    totalQuestionsInfo: document.getElementById('total-questions-info')
-};
-
-// 画面切り替え
-function showScreen(screenName) {
-    Object.values(screens).forEach(screen => screen.classList.add('hidden'));
-    screens[screenName].classList.remove('hidden');
-}
 
 // 約数のペアを取得（1を含むペアは除外）
 function getDivisorPairs(n) {
@@ -52,56 +26,47 @@ function getDivisorPairs(n) {
     return pairs;
 }
 
-// 37以下の素数（小さい順）
-const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
-
 // 重み付きランダム選択（小さい素数ほど高確率）
-function selectWeightedPrime() {
-    // 重み: 2, 3, 5, 7を特に高確率に
-    const weights = [25, 25, 8, 12, 3, 2, 1, 1, 1, 1, 1, 1];
+function selectWeightedPrime(primeWeights) {
+    const primes = Object.keys(primeWeights).map(Number);
+    const weights = Object.values(primeWeights);
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     let random = Math.random() * totalWeight;
     
-    for (let i = 0; i < PRIMES.length; i++) {
+    for (let i = 0; i < primes.length; i++) {
         random -= weights[i];
         if (random <= 0) {
-            return PRIMES[i];
+            return primes[i];
         }
     }
-    return PRIMES[0];
+    return primes[0];
 }
 
 // 現在の数値に応じて停止確率を計算
-// [確率, 閾値] の配列（閾値未満なら確率を返す）
-const STOP_PROBABILITY_TABLE = [
-    [0, 20],      // 20未満は続ける
-    [0.3, 40],    // 20〜40は30%で停止
-    [0.7, 60],    // 40〜60は70%で停止
-    [0.90, 80],   // 60〜80は85%で停止
-    [0.98, 100],  // 80〜120は95%で停止
-];
-
-function getStopProbability(value) {
-    const entry = STOP_PROBABILITY_TABLE.find(([, threshold]) => value < threshold);
+function getStopProbability(value, stopProbabilityTable) {
+    const entry = stopProbabilityTable.find(([, threshold]) => value < threshold);
     return entry ? entry[0] : 1.0; // それ以上は100%で停止
 }
 
 // クイズの正解となる数を生成（素数を掛け合わせて生成）
-function generateAnswerNumber(maxValue = 150) {
-    let result = selectWeightedPrime();
-    const divisors = [result];
-    let retry = 0;
+function generateAnswerNumber(config = CONFIG) {
+    const maxValue = config.MAX_VALUE;
+    // 最小素数と最大素数の積がmaxValue以下であることを確認
+    // これにより、どの素数からスタートしても少なくとも1つの素数を掛けられることが保証される
+    const primes = Object.keys(config.PRIME_WEIGHTS).map(Number);
+    const minPrime = Math.min(...primes);
+    const maxPrime = Math.max(...primes);
+    console.assert(minPrime * maxPrime <= maxValue, `${minPrime} * ${maxPrime} > ${maxValue}`);
     
-    while (divisors.length < 5) {
-        const prime = selectWeightedPrime();
+    let result = selectWeightedPrime(config.PRIME_WEIGHTS);
+    const divisors = [result];
+    
+    while (divisors.length < config.MAX_PRIME_FACTORS) {
+        const prime = selectWeightedPrime(config.PRIME_WEIGHTS);
         const newResult = result * prime;
         
         // 上限を超えたら終了
         if (newResult > maxValue) {
-            if (retry < 10){
-                retry++;
-                continue;
-            }
             break;
         }
         
@@ -109,11 +74,17 @@ function generateAnswerNumber(maxValue = 150) {
         divisors.push(result);
         
         // 現在の値に応じて停止するかどうかを判定
-        if (Math.random() < getStopProbability(result)) {
+        if (Math.random() < getStopProbability(result, config.STOP_PROBABILITY_TABLE)) {
             break;
         }
     }
-    
+
+    if (divisors.length < 2) {
+        const prime = [2, 3][Math.floor(Math.random() * 2)];
+        result *= prime;
+        divisors.push(result);
+    }
+
     return result;
 }
 
@@ -183,14 +154,56 @@ function generateQuestion() {
     };
 }
 
+// ゲームの状態管理
+const gameState = {
+    correctCount: 0,
+    wrongCount: 0,
+    totalQuestions: 0,
+    currentNumber: 0,
+    isAnswering: false,
+    history: [] // 問題履歴
+};
+
+// DOM要素
+const screens = {
+    start: document.getElementById('start-screen'),
+    quiz: document.getElementById('quiz-screen'),
+    result: document.getElementById('result-screen')
+};
+
+const elements = {
+    startBtn: document.getElementById('start-btn'),
+    restartBtn: document.getElementById('restart-btn'),
+    targetNumber: document.getElementById('target-number'),
+    choices: document.getElementById('choices'),
+    progressFill: document.getElementById('progress-fill'),
+    progressText: document.getElementById('progress-text'),
+    correctCount: document.getElementById('correct-count'),
+    wrongCount: document.getElementById('wrong-count'),
+    feedback: document.getElementById('feedback'),
+    feedbackText: document.getElementById('feedback-text'),
+    finalCorrect: document.getElementById('final-correct'),
+    finalWrong: document.getElementById('final-wrong'),
+    finalRate: document.getElementById('final-rate'),
+    resultMessage: document.getElementById('result-message'),
+    history: document.getElementById('history'),
+    totalQuestionsInfo: document.getElementById('total-questions-info')
+};
+
+// 画面切り替え
+function showScreen(screenName) {
+    Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+    screens[screenName].classList.remove('hidden');
+}
+
 // UIを更新
 function updateUI() {
     elements.correctCount.textContent = gameState.correctCount;
     elements.wrongCount.textContent = gameState.wrongCount;
     
-    const progress = (gameState.totalQuestions / gameState.maxQuestions) * 100;
+    const progress = (gameState.totalQuestions / MAX_QUESTIONS) * 100;
     elements.progressFill.style.width = `${progress}%`;
-    elements.progressText.textContent = `${gameState.totalQuestions} / ${gameState.maxQuestions}`;
+    elements.progressText.textContent = `${gameState.totalQuestions} / ${MAX_QUESTIONS}`;
 }
 
 // フィードバックを表示
@@ -282,18 +295,12 @@ function handleAnswer(choice, button, question) {
     
     // 次の問題へ、または結果画面へ
     setTimeout(() => {
-        if (gameState.totalQuestions >= gameState.maxQuestions) {
+        if (gameState.totalQuestions >= MAX_QUESTIONS) {
             showResult();
         } else {
-            nextQuestion();
+            displayQuestion(generateQuestion());
         }
     }, delay);
-}
-
-// 次の問題
-function nextQuestion() {
-    const question = generateQuestion();
-    displayQuestion(question);
 }
 
 // 結果を表示
@@ -352,7 +359,7 @@ function startGame() {
     
     updateUI();
     showScreen('quiz');
-    nextQuestion();
+    displayQuestion(generateQuestion());
 }
 
 // イベントリスナー
@@ -369,8 +376,8 @@ document.addEventListener('keydown', (e) => {
 
 // 初期化
 function init() {
-    elements.totalQuestionsInfo.textContent = `全${gameState.maxQuestions}問`;
-    elements.progressText.textContent = `0 / ${gameState.maxQuestions}`;
+    elements.totalQuestionsInfo.textContent = `全${MAX_QUESTIONS}問`;
+    elements.progressText.textContent = `0 / ${MAX_QUESTIONS}`;
     showScreen('start');
 }
 

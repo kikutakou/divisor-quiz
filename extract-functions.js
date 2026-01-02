@@ -192,8 +192,9 @@ function main() {
 
                     // Extract only if not a reference to DOM elements
                     if (!containsDOMAccess(decl.init)) {
-                        // Extract only array constants (objects are often for state management like gameState)
-                        if (decl.init && decl.init.type === 'ArrayExpression') {
+                        // Extract array, object, and literal constants
+                        const allowedTypes = ['ArrayExpression', 'ObjectExpression', 'Literal'];
+                        if (decl.init && allowedTypes.includes(decl.init.type)) {
                             pureConstants.push({
                                 name: constName,
                                 code: sourceCode.slice(node.start, node.end)
