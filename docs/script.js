@@ -1,5 +1,10 @@
 // 固定設定
 const MAX_QUESTIONS = 10;
+const TIME_LIMIT = 10000; // 1問あたりの制限時間（ミリ秒）
+
+// タイマー関連
+let questionTimer = null;
+let timerInterval = null;
 
 // ゲーム設定パラメータ（難易度別）
 const CONFIGS = [
@@ -45,8 +50,8 @@ const CONFIGS = [
     },
 ];
 
-// 現在の設定（デフォルトは中級）
-let currentConfig = CONFIGS[1];
+// 現在の設定（デフォルトは初級）
+let currentConfig = CONFIGS[0];
 
 // 約数のペアを取得（1を含むペアは除外）
 function getDivisorPairs(n) {
@@ -194,7 +199,9 @@ const gameState = {
     totalQuestions: 0,
     currentNumber: 0,
     isAnswering: false,
-    history: [] // 問題履歴
+    history: [], // 問題履歴
+    totalTime: 0, // 累計解答時間（ミリ秒）
+    questionStartTime: 0 // 問題表示開始時刻
 };
 
 // DOM要素
@@ -218,10 +225,12 @@ const elements = {
     finalCorrect: document.getElementById('final-correct'),
     finalWrong: document.getElementById('final-wrong'),
     finalRate: document.getElementById('final-rate'),
+    finalTime: document.getElementById('final-time'),
     resultMessage: document.getElementById('result-message'),
     history: document.getElementById('history'),
     totalQuestionsInfo: document.getElementById('total-questions-info'),
-    difficultyBtns: document.querySelectorAll('.difficulty-btn')
+    difficultyBtns: document.querySelectorAll('.difficulty-btn'),
+    timerDisplay: document.getElementById('timer-display')
 };
 
 // 画面切り替え
@@ -258,12 +267,54 @@ function hideFeedback() {
     elements.feedback.classList.remove('visible');
 }
 
+// タイマーをクリア
+function clearQuestionTimer() {
+    if (questionTimer) {
+        clearTimeout(questionTimer);
+        questionTimer = null;
+    }
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// タイマー表示を更新
+function updateTimerDisplay(remaining) {
+    const seconds = Math.ceil(remaining / 1000);
+    let timerValue = elements.timerDisplay.querySelector('.timer-value');
+    
+    if (!timerValue) {
+        elements.timerDisplay.innerHTML = `<span class="timer-value">${seconds}</span>`;
+        timerValue = elements.timerDisplay.querySelector('.timer-value');
+    } else {
+        timerValue.textContent = seconds;
+    }
+    
+    // 2桁の時はクラスを追加（幅をtransitionで変化させる）
+    if (seconds >= 10) {
+        timerValue.classList.add('two-digit');
+    } else {
+        timerValue.classList.remove('two-digit');
+    }
+    
+    // 残り3秒以下で警告色に
+    if (seconds <= 3) {
+        elements.timerDisplay.classList.add('warning');
+    } else {
+        elements.timerDisplay.classList.remove('warning');
+    }
+}
+
 // 問題を表示
 function displayQuestion(question) {
     // 前の選択肢のフォーカス状態を解除（モバイル対応）
     if (document.activeElement) {
         document.activeElement.blur();
     }
+    
+    // 前のタイマーをクリア
+    clearQuestionTimer();
     
     elements.targetNumber.textContent = question.number;
     elements.choices.innerHTML = '';
@@ -279,12 +330,87 @@ function displayQuestion(question) {
     
     hideFeedback();
     gameState.isAnswering = false;
+    gameState.questionStartTime = Date.now();
+    
+    // タイマー表示を初期化
+    updateTimerDisplay(TIME_LIMIT);
+    
+    // タイマー表示を1秒ごとに更新
+    timerInterval = setInterval(() => {
+        const elapsed = Date.now() - gameState.questionStartTime;
+        const remaining = TIME_LIMIT - elapsed;
+        if (remaining > 0) {
+            updateTimerDisplay(remaining);
+        }
+    }, 100);
+    
+    // 制限時間後に自動で不正解
+    questionTimer = setTimeout(() => {
+        handleTimeout(question);
+    }, TIME_LIMIT);
+}
+
+// タイムアウト処理
+function handleTimeout(question) {
+    if (gameState.isAnswering) return;
+    gameState.isAnswering = true;
+    
+    clearQuestionTimer();
+    
+    // タイマー表示を0にする
+    elements.timerDisplay.innerHTML = '<span class="timer-value">0</span>';
+    
+    // 制限時間いっぱいを記録
+    gameState.totalTime += TIME_LIMIT;
+    
+    const buttons = elements.choices.querySelectorAll('.choice-btn');
+    buttons.forEach(btn => btn.disabled = true);
+    
+    gameState.totalQuestions++;
+    gameState.wrongCount++;
+    
+    // 正解を見つけて表示
+    const correctChoice = question.choices.find(c => c.isCorrect);
+    buttons.forEach((btn, index) => {
+        if (question.choices[index].isCorrect) {
+            btn.classList.add('correct');
+        }
+    });
+    
+    // 履歴に記録（タイムアウト）
+    gameState.history.push({
+        number: question.number,
+        userAnswer: ['時間切れ', ''],
+        correctAnswer: correctChoice.pair,
+        isCorrect: false
+    });
+    
+    elements.feedbackText.textContent = '時間切れ！';
+    elements.feedback.classList.remove('correct', 'wrong');
+    elements.feedback.classList.add('wrong', 'visible');
+    
+    updateUI();
+    
+    // 次の問題へ
+    setTimeout(() => {
+        if (gameState.totalQuestions >= MAX_QUESTIONS) {
+            showResult();
+        } else {
+            displayQuestion(generateQuestion());
+        }
+    }, 1500);
 }
 
 // 回答を処理
 function handleAnswer(choice, button, question) {
     if (gameState.isAnswering) return;
     gameState.isAnswering = true;
+    
+    // タイマーをクリア
+    clearQuestionTimer();
+    
+    // 解答時間を記録（delayは含めない）
+    gameState.totalTime += Date.now() - gameState.questionStartTime;
     
     // タップ後すぐにフォーカスを解除（モバイル対応）
     button.blur();
@@ -298,7 +424,7 @@ function handleAnswer(choice, button, question) {
     const correctChoice = question.choices.find(c => c.isCorrect);
     
     // 待機時間（正解時は短く、不正解時は長く）
-    let delay = 1000;
+    let delay = 700;
     
     // 履歴に記録
     gameState.history.push({
@@ -337,6 +463,17 @@ function handleAnswer(choice, button, question) {
     }, delay);
 }
 
+// 時間をフォーマット（分:秒.小数点1桁）
+function formatTime(ms) {
+    const totalSeconds = ms / 1000;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = (totalSeconds % 60).toFixed(1);
+    if (minutes > 0) {
+        return `${minutes}:${seconds.padStart(4, '0')}`;
+    }
+    return `${seconds}秒`;
+}
+
 // 結果を表示
 function showResult() {
     const total = gameState.totalQuestions;
@@ -347,6 +484,7 @@ function showResult() {
     elements.finalCorrect.textContent = correct;
     elements.finalWrong.textContent = wrong;
     elements.finalRate.textContent = `${rate}%`;
+    elements.finalTime.textContent = formatTime(gameState.totalTime);
     
     let message = '';
     if (rate === 100) {
@@ -390,6 +528,7 @@ function startGame() {
     gameState.totalQuestions = 0;
     gameState.isAnswering = false;
     gameState.history = [];
+    gameState.totalTime = 0;
     
     updateUI();
     showScreen('quiz');

@@ -297,6 +297,55 @@ body::before {
     }
 }
 
+/* タイマー表示 */
+.timer-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-top: 12px;
+    transition: color 0.3s ease;
+    min-width: 4em;
+    display: inline-block;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.timer-display .timer-value {
+    display: inline-block;
+    width: 0.8em;
+    text-align: right;
+    transition: width 0.2s ease;
+}
+
+.timer-display .timer-value.two-digit {
+    width: 1.5em;
+}
+
+.timer-display::before {
+    content: '⏱';
+    margin-right: 0.15em;
+}
+
+.timer-display::after {
+    content: '秒';
+    font-size: 0.9rem;
+    margin-left: 2px;
+}
+
+.timer-display.warning {
+    color: var(--wrong-color);
+    animation: timerPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
 .choices {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

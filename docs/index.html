@@ -21,8 +21,8 @@
             <div class="difficulty-container">
                 <p class="difficulty-label">難易度を選択</p>
                 <div class="difficulty-buttons">
-                    <button class="difficulty-btn" data-level="0">初級</button>
-                    <button class="difficulty-btn selected" data-level="1">中級</button>
+                    <button class="difficulty-btn selected" data-level="0">初級</button>
+                    <button class="difficulty-btn" data-level="1">中級</button>
                     <button class="difficulty-btn" data-level="2">上級</button>
                 </div>
             </div>
@@ -53,6 +53,7 @@
             <div class="question-container">
                 <p class="question-label">この数の約数の組み合わせは？</p>
                 <div id="target-number" class="target-number">60</div>
+                <div id="timer-display" class="timer-display"><span class="timer-value two-digit">10</span></div>
             </div>
 
             <div id="choices" class="choices">
@@ -80,6 +81,10 @@
                     <div class="result-stat">
                         <span class="result-stat-label">正答率</span>
                         <span id="final-rate" class="result-stat-value">100%</span>
+                    </div>
+                    <div class="result-stat">
+                        <span class="result-stat-label">タイム</span>
+                        <span id="final-time" class="result-stat-value">0:00</span>
                     </div>
                 </div>
                 <div id="result-message" class="result-message"></div>
