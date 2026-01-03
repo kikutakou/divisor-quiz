@@ -1,6 +1,7 @@
 // 固定設定
 const MAX_QUESTIONS = 10;
 const TIME_LIMIT = 10000; // 1問あたりの制限時間（ミリ秒）
+const STORAGE_KEY = 'divisorQuizRecords';
 
 // タイマー関連
 let questionTimer = null;
@@ -25,7 +26,7 @@ const CONFIGS = [
     {
         name: '中級',
         MAX_PRIME_FACTORS: 5,
-        PRIME_WEIGHTS: { 2: 30, 3: 30, 5: 15, 7: 15, 11: 5, 13: 5 },
+        PRIME_WEIGHTS: { 2: 30, 3: 30, 5: 15, 7: 15, 11: 5 },
         STOP_PROBABILITY_TABLE: [
             [0, 20],      // 20未満は続ける
             [0.4, 40],    // 20〜40は40%で停止
@@ -38,7 +39,7 @@ const CONFIGS = [
     {
         name: '上級',
         MAX_PRIME_FACTORS: 5,
-        PRIME_WEIGHTS: { 2: 25, 3: 25, 5: 8, 7: 12, 11: 3, 13: 2, 17: 1, 19: 1, 23: 1, 29: 1, 31: 1, 37: 1 },
+        PRIME_WEIGHTS: { 2: 25, 3: 25, 5: 8, 7: 12, 11: 3, 13: 2 },
         STOP_PROBABILITY_TABLE: [
             [0, 20],      // 20未満は続ける
             [0.3, 40],    // 20〜40は30%で停止
@@ -170,7 +171,12 @@ function shuffleArray(array) {
 
 // 新しい問題を生成
 function generateQuestion() {
-    const number = generateAnswerNumber();
+    const previousNumber = gameState.currentNumber;
+    let number;
+    do {
+        number = generateAnswerNumber();
+    } while (number === previousNumber);
+    
     gameState.currentNumber = number;
     const correctPairs = getDivisorPairs(number);
     
@@ -208,7 +214,8 @@ const gameState = {
 const screens = {
     start: document.getElementById('start-screen'),
     quiz: document.getElementById('quiz-screen'),
-    result: document.getElementById('result-screen')
+    result: document.getElementById('result-screen'),
+    records: document.getElementById('records-screen')
 };
 
 const elements = {
@@ -223,14 +230,17 @@ const elements = {
     feedback: document.getElementById('feedback'),
     feedbackText: document.getElementById('feedback-text'),
     finalCorrect: document.getElementById('final-correct'),
-    finalWrong: document.getElementById('final-wrong'),
-    finalRate: document.getElementById('final-rate'),
+    finalLevel: document.getElementById('final-level'),
     finalTime: document.getElementById('final-time'),
     resultMessage: document.getElementById('result-message'),
     history: document.getElementById('history'),
     totalQuestionsInfo: document.getElementById('total-questions-info'),
     difficultyBtns: document.querySelectorAll('.difficulty-btn'),
-    timerDisplay: document.getElementById('timer-display')
+    timerDisplay: document.getElementById('timer-display'),
+    recordsBtn: document.getElementById('records-btn'),
+    recordsBackBtn: document.getElementById('records-back-btn'),
+    recordsList: document.getElementById('records-list'),
+    resultRecordsBtn: document.getElementById('result-records-btn')
 };
 
 // 画面切り替え
@@ -481,9 +491,11 @@ function showResult() {
     const wrong = gameState.wrongCount;
     const rate = Math.round((correct / total) * 100);
     
+    // 成績を保存
+    updateTodayBestScore(correct, getCurrentLevel(), gameState.totalTime);
+    
     elements.finalCorrect.textContent = correct;
-    elements.finalWrong.textContent = wrong;
-    elements.finalRate.textContent = `${rate}%`;
+    elements.finalLevel.textContent = currentConfig.name;
     elements.finalTime.textContent = formatTime(gameState.totalTime);
     
     let message = '';
@@ -556,6 +568,13 @@ elements.difficultyBtns.forEach(btn => {
     });
 });
 
+// 成績画面のイベントリスナー
+elements.recordsBtn.addEventListener('click', showRecords);
+elements.resultRecordsBtn.addEventListener('click', showRecords);
+elements.recordsBackBtn.addEventListener('click', () => {
+    showScreen('start');
+});
+
 // キーボードイベント（スペースキーでスタート）
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !screens.start.classList.contains('hidden')) {
@@ -564,7 +583,113 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// 初期化
+// ========== 成績保存機能 ==========
+
+// 今日の日付を取得（YYYY-MM-DD形式）
+function getTodayDateString() {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+}
+
+// 成績をlocalStorageから読み込み
+function loadRecords() {
+    try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : {};
+    } catch (e) {
+        console.error('成績の読み込みに失敗しました:', e);
+        return {};
+    }
+}
+
+// 成績をlocalStorageに保存
+function saveRecords(records) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    } catch (e) {
+        console.error('成績の保存に失敗しました:', e);
+    }
+}
+
+// 今日のベストスコアを更新（必要に応じて）
+function updateTodayBestScore(score, level, time) {
+    const records = loadRecords();
+    const today = getTodayDateString();
+    const existing = records[today];
+    
+    // 更新条件の優先順位:
+    // 1. 正解数が高い
+    // 2. 正解数が同じならレベルが高い
+    // 3. 正解数とレベルが同じならタイムが短い
+    let shouldUpdate = false;
+    if (!existing) {
+        shouldUpdate = true;
+    } else if (score > existing.score) {
+        shouldUpdate = true;
+    } else if (score === existing.score && level > existing.level) {
+        shouldUpdate = true;
+    } else if (score === existing.score && level === existing.level && time < existing.time) {
+        shouldUpdate = true;
+    }
+    
+    if (shouldUpdate) {
+        records[today] = {
+            score: score,
+            level: level,
+            levelName: CONFIGS[level].name,
+            time: time
+        };
+        saveRecords(records);
+    }
+}
+
+// 成績画面を表示
+function showRecords() {
+    const records = loadRecords();
+    const recordsList = elements.recordsList;
+    
+    // 日付でソート（新しい順）
+    const sortedDates = Object.keys(records).sort().reverse();
+    
+    if (sortedDates.length === 0) {
+        recordsList.innerHTML = '<p class="no-records">まだ成績がありません</p>';
+    } else {
+        recordsList.innerHTML = sortedDates.map(date => {
+            const record = records[date];
+            const formattedDate = formatDateForDisplay(date);
+            const scoreClass = record.score === MAX_QUESTIONS ? 'perfect' : '';
+            const timeDisplay = record.time ? formatTime(record.time) : '-';
+            return `
+                <div class="record-item">
+                    <span class="record-date">${formattedDate}</span>
+                    <span class="record-level">${record.levelName}</span>
+                    <span class="record-score ${scoreClass}">${record.score}/${MAX_QUESTIONS}</span>
+                    <span class="record-time">${timeDisplay}</span>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    showScreen('records');
+}
+
+// 日付を表示用にフォーマット
+function formatDateForDisplay(dateString) {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekday = weekdays[date.getDay()];
+    return `${month}/${day}（${weekday}）`;
+}
+
+// 現在の難易度レベルを取得
+function getCurrentLevel() {
+    return CONFIGS.indexOf(currentConfig);
+}
+
+// ========== 初期化 ==========
+
 function init() {
     elements.totalQuestionsInfo.textContent = `全${MAX_QUESTIONS}問`;
     elements.progressText.textContent = `0 / ${MAX_QUESTIONS}`;

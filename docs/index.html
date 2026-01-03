@@ -21,12 +21,15 @@
             <div class="difficulty-container">
                 <p class="difficulty-label">難易度を選択</p>
                 <div class="difficulty-buttons">
-                    <button class="difficulty-btn selected" data-level="0">初級</button>
-                    <button class="difficulty-btn" data-level="1">中級</button>
+                    <button class="difficulty-btn" data-level="0">初級</button>
+                    <button class="difficulty-btn selected" data-level="1">中級</button>
                     <button class="difficulty-btn" data-level="2">上級</button>
                 </div>
             </div>
-            <button id="start-btn" class="btn btn-primary">スタート</button>
+            <div class="start-buttons">
+                <button id="start-btn" class="btn btn-primary">スタート</button>
+                <button id="records-btn" class="btn btn-secondary">過去の成績を見る</button>
+            </div>
         </div>
 
         <!-- クイズ画面 -->
@@ -75,12 +78,8 @@
                         <span id="final-correct" class="result-stat-value">10</span>
                     </div>
                     <div class="result-stat">
-                        <span class="result-stat-label">不正解数</span>
-                        <span id="final-wrong" class="result-stat-value">0</span>
-                    </div>
-                    <div class="result-stat">
-                        <span class="result-stat-label">正答率</span>
-                        <span id="final-rate" class="result-stat-value">100%</span>
+                        <span class="result-stat-label">レベル</span>
+                        <span id="final-level" class="result-stat-value">中級</span>
                     </div>
                     <div class="result-stat">
                         <span class="result-stat-label">タイム</span>
@@ -91,7 +90,28 @@
                 <div id="history" class="history">
                     <!-- 履歴がここに挿入される -->
                 </div>
-                <button id="restart-btn" class="btn btn-primary">もう一度挑戦</button>
+                <div class="result-buttons">
+                    <button id="restart-btn" class="btn btn-primary">もう一度挑戦</button>
+                    <button id="result-records-btn" class="btn btn-secondary">過去の成績を見る</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成績画面 -->
+        <div id="records-screen" class="screen hidden">
+            <div class="records-container">
+                <h2 class="records-title">📊 過去の成績</h2>
+                <p class="records-subtitle">1日ごとのベストスコア</p>
+                <div class="records-header">
+                    <span class="header-date">日付</span>
+                    <span class="header-level">難易度</span>
+                    <span class="header-score">スコア</span>
+                    <span class="header-time">タイム</span>
+                </div>
+                <div id="records-list" class="records-list">
+                    <!-- 成績がここに挿入される -->
+                </div>
+                <button id="records-back-btn" class="btn btn-secondary">戻る</button>
             </div>
         </div>
     </div>
